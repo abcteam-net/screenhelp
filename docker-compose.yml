@@ -1,0 +1,38 @@
+services:
+  screenhelp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: screenhelp:local
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      SCREENHELP_BRIDGE_PORT: 8787
+      SCREENHELP_BRIDGE_TOKEN: ${SCREENHELP_BRIDGE_TOKEN:-screenhelp-local-token}
+      SCREENHELP_CLAUDE_BIN: claude
+      SCREENHELP_CODEX_BIN: codex
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - screenhelp-claude:/home/screenhelp/.claude
+      - screenhelp-codex:/home/screenhelp/.codex
+    restart: unless-stopped
+
+  whisper:
+    image: hwdsl2/whisper-server:latest
+    profiles: ["meeting"]
+    ports:
+      - "9000:9000"
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-base}
+    volumes:
+      - whisper-data:/var/lib/whisper
+    restart: unless-stopped
+
+volumes:
+  screenhelp-claude:
+  screenhelp-codex:
+  whisper-data:

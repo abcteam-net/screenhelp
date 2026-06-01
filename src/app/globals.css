@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body {
+  background: #f7f6f3;
+  color: #37352f;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+* { box-sizing: border-box; }
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(222, 219, 210, 0.65) 1px, transparent 1px),
+    linear-gradient(rgba(222, 219, 210, 0.48) 1px, transparent 1px),
+    #f7f6f3;
+  background-size: 32px 32px;
+}
+
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.35;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.72), transparent 28%),
+    radial-gradient(circle at 80% 0%, rgba(232,241,239,0.72), transparent 32%);
+}
+
+/* Scrollbar polish */
+.scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(55, 53, 47, 0.16);
+  border-radius: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: rgba(55, 53, 47, 0.28); }
+
+/* Recording pulse */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  50% { opacity: 0.6; box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+}
+.pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* Glass primitive — drop-in via .glass and .glass-strong */
+.glass {
+  background: rgba(255,255,255,0.88);
+  border: 1px solid #dedbd2;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 28px -24px rgba(15, 23, 42, 0.35);
+}
+.glass-strong {
+  background: rgba(255,255,255,0.94);
+  border: 1px solid #d7d2c7;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 24px 48px -32px rgba(15, 23, 42, 0.3);
+}
+
+/* Buttons */
+.btn-primary {
+  background: #2f6f68;
+  color: #fff;
+  border: 1px solid #2b645e;
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.12);
+  transition: all 0.15s ease;
+}
+.btn-primary:hover { background: #255b55; }
+.btn-primary:active { transform: translateY(1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-ghost {
+  background: #fbfaf8;
+  color: #37352f;
+  border: 1px solid #dedbd2;
+  transition: all 0.15s ease;
+}
+.btn-ghost:hover { background: #f3f1ed; border-color: #c8c3b8; }
+
+/* Kbd keys */
+kbd {
+  font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.75em;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  background: #f3f1ed;
+  border: 1px solid #dedbd2;
+  color: #37352f;
+}
+
+/* Markdown */
+.markdown { font-size: 14px; line-height: 1.65; color: #37352f; }
+.markdown pre {
+  background: #f3f1ed;
+  border: 1px solid #dedbd2;
+  padding: 14px 16px;
+  border-radius: 10px;
+  overflow-x: auto;
+  font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+.markdown code {
+  background: #f3f1ed;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.88em;
+}
+.markdown pre code { background: transparent; padding: 0; }
+.markdown h2 { font-size: 15px; font-weight: 600; margin: 14px 0 6px; color: #37352f; letter-spacing: 0; }
+.markdown h3 { font-size: 14px; font-weight: 600; margin: 10px 0 4px; color: #37352f; }
+.markdown ul { padding-left: 20px; list-style: disc; }
+.markdown ol { padding-left: 20px; list-style: decimal; }
+.markdown p { margin: 6px 0; }
+.markdown strong { color: #22211d; font-weight: 600; }
+.markdown em { color: #6f6a60; }
+
+/* Inputs */
+.input {
+  background: #ffffff;
+  border: 1px solid #dedbd2;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #37352f;
+  font-size: 13px;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+.input:focus {
+  outline: none;
+  border-color: #2f6f68;
+  box-shadow: 0 0 0 3px rgba(47,111,104,0.12);
+}
+.input::placeholder { color: #9b9488; }

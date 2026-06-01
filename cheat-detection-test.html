@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cheat Detection Test — CoderPad / CodinGame style</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: monospace; background: #0f1117; color: #e2e8f0; min-height: 100vh; display: flex; gap: 0; }
+
+    #editor-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #2d3748;
+    }
+    #editor-header {
+      padding: 10px 16px;
+      background: #1a1f2e;
+      border-bottom: 1px solid #2d3748;
+      font-size: 13px;
+      color: #a0aec0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #status-badge {
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: bold;
+      background: #22543d;
+      color: #68d391;
+    }
+    #status-badge.warn { background: #744210; color: #f6ad55; }
+    #status-badge.alert { background: #63171b; color: #fc8181; }
+
+    #code-area {
+      flex: 1;
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 16px;
+      border: none;
+      outline: none;
+      resize: none;
+      line-height: 1.7;
+    }
+
+    #log-pane {
+      width: 360px;
+      display: flex;
+      flex-direction: column;
+      background: #0d1017;
+    }
+    #log-header {
+      padding: 10px 16px;
+      background: #1a1f2e;
+      border-bottom: 1px solid #2d3748;
+      font-size: 13px;
+      color: #a0aec0;
+      display: flex;
+      justify-content: space-between;
+    }
+    #clear-btn {
+      background: none;
+      border: 1px solid #2d3748;
+      color: #a0aec0;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 2px 8px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #clear-btn:hover { border-color: #4a5568; color: #e2e8f0; }
+
+    #log-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    .log-entry {
+      padding: 6px 16px;
+      font-size: 12px;
+      border-left: 3px solid transparent;
+      line-height: 1.5;
+    }
+    .log-entry.info  { border-color: #4299e1; color: #90cdf4; }
+    .log-entry.warn  { border-color: #ed8936; color: #fbd38d; }
+    .log-entry.alert { border-color: #fc8181; color: #feb2b2; background: #1a0e0e; }
+    .log-time { color: #4a5568; margin-right: 6px; }
+
+    #score-bar {
+      padding: 12px 16px;
+      border-top: 1px solid #2d3748;
+      background: #1a1f2e;
+    }
+    #score-label { font-size: 11px; color: #a0aec0; margin-bottom: 6px; display: flex; justify-content: space-between; }
+    #score-track { background: #2d3748; border-radius: 4px; height: 8px; overflow: hidden; }
+    #score-fill  { height: 100%; border-radius: 4px; background: #68d391; transition: width 0.4s, background 0.4s; width: 0%; }
+
+    #vm-panel {
+      border-top: 1px solid #2d3748;
+      background: #0d1017;
+      padding: 12px 16px;
+    }
+    #vm-panel h3 { font-size: 11px; color: #a0aec0; margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .vm-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 11px; border-bottom: 1px solid #1a2030; }
+    .vm-row:last-child { border: none; }
+    .vm-key { color: #4a5568; }
+    .vm-val { color: #a0aec0; max-width: 200px; text-align: right; word-break: break-all; }
+    .vm-val.hit  { color: #fc8181; font-weight: bold; }
+    .vm-val.ok   { color: #68d391; }
+    .vm-val.warn { color: #f6ad55; }
+    #vm-verdict { margin-top: 10px; font-size: 12px; font-weight: bold; text-align: center; padding: 6px; border-radius: 4px; }
+    #vm-verdict.clean  { background: #1a3a2a; color: #68d391; }
+    #vm-verdict.likely { background: #3a2a10; color: #f6ad55; }
+    #vm-verdict.strong { background: #2a1010; color: #fc8181; }
+  </style>
+</head>
+<body>
+
+<!-- Fullscreen gate overlay -->
+<div id="fs-gate" style="
+  position: fixed; inset: 0; z-index: 9999;
+  background: #0f1117; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  font-family: monospace;
+">
+  <div style="font-size: 18px; color: #e2e8f0; font-weight: bold;">Coding Assessment</div>
+  <div style="font-size: 13px; color: #a0aec0; max-width: 340px; text-align: center; line-height: 1.7;">
+    This session requires <strong style="color:#f6ad55">fullscreen mode</strong>.<br/>
+    Exiting fullscreen will be flagged and recorded.
+  </div>
+  <button id="fs-btn" style="
+    margin-top: 8px; padding: 10px 28px;
+    background: #6366f1; color: #fff; border: none;
+    border-radius: 6px; font-family: monospace; font-size: 14px;
+    cursor: pointer; font-weight: bold;
+  ">Enter Fullscreen & Start</button>
+  <div id="fs-warn" style="font-size: 12px; color: #fc8181; min-height: 18px;"></div>
+</div>
+
+<!-- Fullscreen exit warning banner -->
+<div id="fs-banner" style="
+  display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 8888;
+  background: #63171b; color: #fc8181; font-family: monospace;
+  font-size: 13px; padding: 10px 20px;
+  display: none; align-items: center; justify-content: space-between;
+">
+  <span>⚠ Fullscreen exited — this has been flagged. Return to fullscreen immediately.</span>
+  <button onclick="requestFS()" style="
+    background: #fc8181; color: #1a0e0e; border: none;
+    padding: 4px 12px; border-radius: 4px; font-family: monospace;
+    font-size: 12px; cursor: pointer; font-weight: bold;
+  ">Return</button>
+</div>
+
+<div id="editor-pane">
+  <div id="editor-header">
+    <span>candidate_solution.js — Live Session</span>
+    <span id="status-badge">CLEAN</span>
+  </div>
+  <textarea id="code-area" spellcheck="false" placeholder="// Start typing your solution here...
+// This sandbox monitors the same signals CoderPad / CodinGame use.
+// Try: switching tabs, pasting code, right-clicking, DevTools...
+"></textarea>
+</div>
+
+<div id="log-pane">
+  <div id="log-header">
+    <span>Detection Log</span>
+    <button id="clear-btn" onclick="clearLog()">Clear</button>
+  </div>
+  <div id="log-list"></div>
+  <div id="score-bar">
+    <div id="score-label">
+      <span>Suspicion score</span>
+      <span id="score-num">0 / 100</span>
+    </div>
+    <div id="score-track"><div id="score-fill"></div></div>
+  </div>
+
+  <div id="vm-panel">
+    <h3>VM / Environment Fingerprint</h3>
+    <div class="vm-row"><span class="vm-key">GPU Renderer</span><span class="vm-val" id="vm-renderer">—</span></div>
+    <div class="vm-row"><span class="vm-key">GPU Vendor</span><span class="vm-val" id="vm-vendor">—</span></div>
+    <div class="vm-row"><span class="vm-key">CPU cores</span><span class="vm-val" id="vm-cores">—</span></div>
+    <div class="vm-row"><span class="vm-key">Screen res</span><span class="vm-val" id="vm-screen">—</span></div>
+    <div class="vm-row"><span class="vm-key">Color depth</span><span class="vm-val" id="vm-color">—</span></div>
+    <div class="vm-row"><span class="vm-key">Battery API</span><span class="vm-val" id="vm-battery">—</span></div>
+    <div class="vm-row"><span class="vm-key">Perf jitter</span><span class="vm-val" id="vm-jitter">—</span></div>
+    <div class="vm-row"><span class="vm-key">Canvas hash</span><span class="vm-val" id="vm-canvas">—</span></div>
+    <div id="vm-verdict" class="clean">Scanning…</div>
+  </div>
+</div>
+
+<script>
+  // ── state ─────────────────────────────────────────────────────────────────
+  let score = 0;
+  let lastFocus = Date.now();
+  let focusLossCount = 0;
+  let pasteCount = 0;
+  let rightClickCount = 0;
+  let keystrokes = 0;
+  let lastKeystroke = Date.now();
+  let idleTimer = null;
+  let devtoolsOpen = false;
+  let visibilityGaps = [];    // [{start, end}]
+  let copyBeforePaste = false;
+  let copyTimestamp = null;
+  let externalPasteStreak = 0; // pastes with no prior copy in session
+
+  // ── helpers ───────────────────────────────────────────────────────────────
+  function ts() {
+    return new Date().toLocaleTimeString("en-GB", { hour12: false });
+  }
+
+  function log(msg, level = "info") {
+    const el = document.createElement("div");
+    el.className = `log-entry ${level}`;
+    el.innerHTML = `<span class="log-time">${ts()}</span>${msg}`;
+    const list = document.getElementById("log-list");
+    list.appendChild(el);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function addScore(pts, reason) {
+    score = Math.min(100, score + pts);
+    updateUI();
+    log(`+${pts} — ${reason}`, pts >= 15 ? "alert" : pts >= 7 ? "warn" : "info");
+  }
+
+  function updateUI() {
+    const fill = document.getElementById("score-fill");
+    const num  = document.getElementById("score-num");
+    const badge = document.getElementById("status-badge");
+    fill.style.width = score + "%";
+    num.textContent = `${score} / 100`;
+    if (score < 20) {
+      fill.style.background = "#68d391";
+      badge.className = "";
+      badge.textContent = "CLEAN";
+    } else if (score < 50) {
+      fill.style.background = "#f6ad55";
+      badge.className = "warn";
+      badge.textContent = "SUSPICIOUS";
+    } else {
+      fill.style.background = "#fc8181";
+      badge.className = "alert";
+      badge.textContent = "FLAGGED";
+    }
+  }
+
+  function clearLog() {
+    document.getElementById("log-list").innerHTML = "";
+  }
+
+  // ── 1. tab / window visibility ────────────────────────────────────────────
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      lastFocus = Date.now();
+      log("Tab hidden — timer started", "warn");
+    } else {
+      const gone = ((Date.now() - lastFocus) / 1000).toFixed(1);
+      focusLossCount++;
+      visibilityGaps.push({ duration: parseFloat(gone) });
+      let pts = gone > 30 ? 20 : gone > 10 ? 12 : gone > 3 ? 6 : 2;
+      if (focusLossCount > 3) pts += 5;
+      addScore(pts, `Tab returned after ${gone}s away (switch #${focusLossCount})`);
+    }
+  });
+
+  // ── 2. window blur / focus ────────────────────────────────────────────────
+  window.addEventListener("blur", () => {
+    lastFocus = Date.now();
+  });
+  window.addEventListener("focus", () => {
+    // only log if visibilitychange didn't already catch it
+    const gone = (Date.now() - lastFocus) / 1000;
+    if (gone > 1 && !document.hidden) {
+      log(`Window re-focused after ${gone.toFixed(1)}s`, "info");
+    }
+  });
+
+  // ── 3. paste detection ────────────────────────────────────────────────────
+  document.getElementById("code-area").addEventListener("paste", (e) => {
+    pasteCount++;
+    const text = (e.clipboardData || window.clipboardData).getData("text") || "";
+    const lines = text.split("\n").length;
+    const wasInternalCopy = copyBeforePaste && copyTimestamp && (Date.now() - copyTimestamp < 60000);
+
+    if (!wasInternalCopy) {
+      externalPasteStreak++;
+      let pts = lines > 20 ? 25 : lines > 5 ? 15 : lines > 1 ? 8 : 3;
+      if (externalPasteStreak > 1) pts += 5;
+      addScore(pts, `External paste — ${lines} line(s), no prior copy in session (paste #${pasteCount})`);
+    } else {
+      log(`Paste detected — ${lines} line(s) (looks like internal copy)`, "info");
+    }
+    copyBeforePaste = false;
+  });
+
+  // ── 4. copy inside editor (marks next paste as internal) ─────────────────
+  document.getElementById("code-area").addEventListener("copy", () => {
+    copyBeforePaste = true;
+    copyTimestamp = Date.now();
+    log("Copy from editor recorded", "info");
+  });
+
+  // ── 5. right-click / context menu ─────────────────────────────────────────
+  document.addEventListener("contextmenu", (e) => {
+    rightClickCount++;
+    addScore(3, `Right-click #${rightClickCount} (often precedes paste)`);
+  });
+
+  // ── 6. keyboard idle detection ────────────────────────────────────────────
+  document.getElementById("code-area").addEventListener("keydown", () => {
+    keystrokes++;
+    lastKeystroke = Date.now();
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (!document.hidden) {
+        log("Typing idle > 2 min while tab is active", "warn");
+        addScore(5, "Typing stopped > 2 min (reading external source?)");
+      }
+    }, 120000);
+  });
+
+  // ── 7. DevTools open detection ────────────────────────────────────────────
+  // Method A: window size delta
+  const threshold = 160;
+  setInterval(() => {
+    const widthDiff  = window.outerWidth  - window.innerWidth;
+    const heightDiff = window.outerHeight - window.innerHeight;
+    const open = widthDiff > threshold || heightDiff > threshold;
+    if (open && !devtoolsOpen) {
+      devtoolsOpen = true;
+      addScore(15, "DevTools opened (window size delta method)");
+    } else if (!open && devtoolsOpen) {
+      devtoolsOpen = false;
+      log("DevTools closed", "info");
+    }
+  }, 1000);
+
+  // Method B: toString override trick
+  let devtoolsB = false;
+  const img = new Image();
+  Object.defineProperty(img, "id", {
+    get() {
+      if (!devtoolsB) {
+        devtoolsB = true;
+        addScore(15, "DevTools opened (console inspection method)");
+      }
+    }
+  });
+  setInterval(() => { console.log("%c ", img); }, 2000);
+
+  // ── 8. selection + keyboard shortcut combos ───────────────────────────────
+  document.addEventListener("keydown", (e) => {
+    // Ctrl+A then Ctrl+C — select-all copy (suspicious in editor context)
+    if (e.ctrlKey && e.key === "a") {
+      setTimeout(() => {
+        // just flag if they also hit Ctrl+C within 1s
+        const handler = (e2) => {
+          if (e2.ctrlKey && e2.key === "c") {
+            log("Select-all + Copy combo (may be sharing code)", "warn");
+          }
+          document.removeEventListener("keydown", handler);
+        };
+        document.addEventListener("keydown", handler);
+        setTimeout(() => document.removeEventListener("keydown", handler), 1000);
+      }, 0);
+    }
+  });
+
+  // ── 9. rapid large deletion ───────────────────────────────────────────────
+  let lastLength = 0;
+  document.getElementById("code-area").addEventListener("input", (e) => {
+    const current = e.target.value.length;
+    const delta = lastLength - current;
+    if (delta > 80) {
+      addScore(5, `Large deletion — ${delta} chars removed at once`);
+    }
+    lastLength = current;
+  });
+
+  // ── 10. print / screenshot shortcut ──────────────────────────────────────
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "PrintScreen") {
+      addScore(8, "PrintScreen key pressed");
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "s" || e.key === "S")) {
+      addScore(8, "Screenshot shortcut detected (Ctrl+Shift+S)");
+    }
+  });
+
+  // ── 11. beforeunload (leaving the page) ──────────────────────────────────
+  window.addEventListener("beforeunload", () => {
+    addScore(10, "Attempting to leave / reload the page");
+  });
+
+  // ── 12. mouse leaving the browser window (multi-monitor switch) ──────────
+  let mouseLeaveTime = null;
+  let mouseLeaveCount = 0;
+
+  document.addEventListener("mouseleave", () => {
+    mouseLeaveTime = Date.now();
+  });
+
+  document.addEventListener("mouseenter", () => {
+    if (!mouseLeaveTime) return;
+    const gone = ((Date.now() - mouseLeaveTime) / 1000).toFixed(1);
+    mouseLeaveTime = null;
+    if (gone < 1) return; // ignore accidental micro-exits
+    mouseLeaveCount++;
+    let pts = gone > 30 ? 15 : gone > 10 ? 8 : gone > 3 ? 4 : 1;
+    addScore(pts, `Mouse left window for ${gone}s — possible other screen (exit #${mouseLeaveCount})`);
+  });
+
+  // sustained absence without return (cursor on other screen, no mouseenter)
+  setInterval(() => {
+    if (!mouseLeaveTime) return;
+    const gone = (Date.now() - mouseLeaveTime) / 1000;
+    if (gone > 10 && gone < 11) { // fire once around 10s mark
+      addScore(10, `Mouse absent > 10s — likely on another screen`);
+    }
+  }, 1000);
+
+  // ── 13. fullscreen enforcement ──────────────────────────────────────────
+  let fsExitCount = 0;
+  let sessionStarted = false;
+
+  function requestFS() {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    if (req) req.call(el).catch(() => {
+      document.getElementById("fs-warn").textContent = "Fullscreen request was blocked. Please allow it.";
+    });
+  }
+
+  document.getElementById("fs-btn").addEventListener("click", () => {
+    requestFS();
+  });
+
+  document.addEventListener("fullscreenchange", () => {
+    const isFullscreen = !!document.fullscreenElement;
+    const gate   = document.getElementById("fs-gate");
+    const banner = document.getElementById("fs-banner");
+
+    if (isFullscreen) {
+      gate.style.display = "none";
+      banner.style.display = "none";
+      if (!sessionStarted) {
+        sessionStarted = true;
+        // ── init ────────────────────────────────────────────────────────────
+        log("Session started — fullscreen confirmed", "info");
+        log("Signals: tab switches, paste, DevTools, idle, right-click, print…", "info");
+      }
+    } else if (sessionStarted) {
+      fsExitCount++;
+      banner.style.display = "flex";
+      let pts = fsExitCount === 1 ? 20 : 30;
+      addScore(pts, `Fullscreen exited (exit #${fsExitCount}) — possible screen switch`);
+    }
+  });
+
+  // ── 14. VM / environment fingerprinting ──────────────────────────────────
+  (async function detectVM() {
+    let vmScore = 0;
+    const set = (id, text, cls) => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = text; el.className = "vm-val " + (cls || ""); }
+    };
+
+    // GPU via WebGL
+    const VM_GPU = [
+      "vmware", "virtualbox", "vbox", "llvmpipe", "softpipe",
+      "microsoft basic render", "swiftshader", "parallels", "qemu",
+      "mesa", "gallium", "virgl",
+    ];
+    try {
+      const canvas = document.createElement("canvas");
+      const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+      if (gl) {
+        const ext = gl.getExtension("WEBGL_debug_renderer_info");
+        const renderer = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+        const vendor   = ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL)   : gl.getParameter(gl.VENDOR);
+        const rl = renderer.toLowerCase();
+        const isVMgpu = VM_GPU.some(k => rl.includes(k));
+        set("vm-renderer", renderer, isVMgpu ? "hit" : "ok");
+        set("vm-vendor",   vendor,   isVMgpu ? "hit" : "ok");
+        if (isVMgpu) vmScore += 40;
+      } else {
+        set("vm-renderer", "WebGL unavailable", "hit");
+        set("vm-vendor",   "—", "hit");
+        vmScore += 20;
+      }
+    } catch {
+      set("vm-renderer", "error", "warn");
+    }
+
+    // CPU cores
+    const cores = navigator.hardwareConcurrency || 0;
+    const coresCls = cores <= 1 ? "hit" : cores <= 2 ? "warn" : "ok";
+    set("vm-cores", cores + " cores", coresCls);
+    if (cores <= 1) vmScore += 20;
+    else if (cores <= 2) vmScore += 10;
+
+    // Screen resolution
+    const w = screen.width, h = screen.height;
+    const res = `${w} × ${h}`;
+    const vmRes = [[800,600],[1024,768],[1280,800],[1280,1024],[1366,768]];
+    const suspectRes = vmRes.some(([rw,rh]) => rw === w && rh === h);
+    set("vm-screen", res, suspectRes ? "warn" : "ok");
+    if (suspectRes) vmScore += 10;
+
+    // Color depth
+    const depth = screen.colorDepth;
+    set("vm-color", depth + " bit", depth < 24 ? "hit" : "ok");
+    if (depth < 24) vmScore += 15;
+
+    // Battery API
+    try {
+      if (!navigator.getBattery) throw new Error("no API");
+      const b = await navigator.getBattery();
+      // VMs often show charging=true, level=1.0 permanently
+      const suspicious = b.charging && b.level === 1.0 && b.chargingTime === 0;
+      set("vm-battery", `${Math.round(b.level*100)}% ${b.charging?"charging":"discharging"}`, suspicious ? "warn" : "ok");
+      if (suspicious) vmScore += 10;
+    } catch {
+      set("vm-battery", "unavailable", "hit");
+      vmScore += 10;
+    }
+
+    // Performance jitter — VMs have higher variance due to hypervisor scheduling
+    const samples = [];
+    for (let i = 0; i < 50; i++) {
+      const t0 = performance.now();
+      let x = 0; for (let j = 0; j < 1000; j++) x += Math.sqrt(j);
+      samples.push(performance.now() - t0);
+    }
+    const mean = samples.reduce((a,b) => a+b, 0) / samples.length;
+    const variance = samples.reduce((a,b) => a + (b-mean)**2, 0) / samples.length;
+    const jitter = Math.sqrt(variance).toFixed(3);
+    const jitterCls = jitter > 2 ? "hit" : jitter > 0.5 ? "warn" : "ok";
+    set("vm-jitter", `σ = ${jitter}ms`, jitterCls);
+    if (jitter > 2) vmScore += 15;
+    else if (jitter > 0.5) vmScore += 5;
+
+    // Canvas fingerprint — software renderers produce different pixel output
+    try {
+      const c = document.createElement("canvas");
+      c.width = 200; c.height = 50;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#f60"; ctx.fillRect(10, 10, 100, 30);
+      ctx.fillStyle = "#069"; ctx.font = "16px monospace";
+      ctx.fillText("VM detect 🖥", 15, 32);
+      ctx.strokeStyle = "rgba(99,102,241,0.7)";
+      ctx.arc(150, 25, 15, 0, Math.PI * 2); ctx.stroke();
+      const data = c.toDataURL();
+      // hash the data URL to a short fingerprint
+      let h = 0;
+      for (let i = 0; i < data.length; i++) h = (Math.imul(31, h) + data.charCodeAt(i)) | 0;
+      const hex = (h >>> 0).toString(16).padStart(8, "0");
+      // Known software-renderer hashes tend to cluster; we just display it
+      set("vm-canvas", hex, "ok");
+    } catch {
+      set("vm-canvas", "blocked", "warn");
+      vmScore += 5;
+    }
+
+    // Verdict
+    const verdict = document.getElementById("vm-verdict");
+    if (vmScore >= 40) {
+      verdict.textContent = `Strong VM indicators (score: ${vmScore})`;
+      verdict.className = "strong";
+      addScore(20, `VM fingerprint — strong indicators detected (vm score: ${vmScore})`);
+    } else if (vmScore >= 15) {
+      verdict.textContent = `Possible VM / unusual environment (score: ${vmScore})`;
+      verdict.className = "likely";
+      addScore(8, `VM fingerprint — some suspicious signals (vm score: ${vmScore})`);
+    } else {
+      verdict.textContent = `Looks like a real machine (score: ${vmScore})`;
+      verdict.className = "clean";
+    }
+  })();
+
+  // ── init ──────────────────────────────────────────────────────────────────
+</script>
+</body>
+</html>

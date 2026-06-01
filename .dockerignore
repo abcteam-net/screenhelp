@@ -1,0 +1,13 @@
+.git
+.next
+node_modules
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+tsconfig.tsbuildinfo
+.DS_Store
+.env
+.env.*
+answer-log-*.md
