@@ -715,13 +715,14 @@ function ClaudeCodeConfig({
     setStatus("checking"); setInfo(null);
     try {
       const base = url.replace(/\/$/, "");
-      const r = await fetch(base + "/health", { cache: "no-store" });
-      if (!r.ok) throw new Error(`health HTTP ${r.status}`);
+      const r = await fetch("/api/bridge-test", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ baseUrl: base }),
+        cache: "no-store",
+      });
       const j = await r.json();
-      const tokenRes = await fetch(base + "/token", { cache: "no-store" });
-      if (!tokenRes.ok) throw new Error(`token HTTP ${tokenRes.status}`);
-      const tokenJson = await tokenRes.json();
-      if (!tokenJson?.token) throw new Error("bridge returned no token");
+      if (!r.ok || !j.ok) throw new Error(j?.error || `bridge HTTP ${r.status}`);
       setStatus("ok");
       setInfo(`bridge v${j.version || "?"} ready`);
     } catch (e: any) {
@@ -784,13 +785,14 @@ function CodexCliConfig({
     setStatus("checking"); setInfo(null);
     try {
       const base = url.replace(/\/$/, "");
-      const r = await fetch(base + "/health", { cache: "no-store" });
-      if (!r.ok) throw new Error(`health HTTP ${r.status}`);
+      const r = await fetch("/api/bridge-test", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ baseUrl: base }),
+        cache: "no-store",
+      });
       const j = await r.json();
-      const tokenRes = await fetch(base + "/token", { cache: "no-store" });
-      if (!tokenRes.ok) throw new Error(`token HTTP ${tokenRes.status}`);
-      const tokenJson = await tokenRes.json();
-      if (!tokenJson?.token) throw new Error("bridge returned no token");
+      if (!r.ok || !j.ok) throw new Error(j?.error || `bridge HTTP ${r.status}`);
       setStatus("ok");
       setInfo(`bridge v${j.version || "?"} ready`);
     } catch (e: any) {
