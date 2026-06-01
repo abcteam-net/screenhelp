@@ -41,6 +41,7 @@ const CLAUDE_BIN = process.env.SCREENHELP_CLAUDE_BIN || "~/.local/bin/claude";
 const CODEX_BIN = process.env.SCREENHELP_CODEX_BIN || "codex";
 const TOKEN = process.env.SCREENHELP_BRIDGE_TOKEN || randomBytes(16).toString("hex");
 const WORK_DIR = path.join(tmpdir(), "screenhelp-bridge");
+const CAN_BYPASS_PERMISSIONS = typeof process.getuid !== "function" || process.getuid() !== 0;
 let resolvedClaudeBin = null;
 
 await mkdir(WORK_DIR, { recursive: true });
@@ -215,10 +216,10 @@ async function handleChat(req, res) {
     "--output-format", "stream-json",
     "--include-partial-messages",
     "--verbose", // required by stream-json with partial messages
-    "--permission-mode", "bypassPermissions", // we're not letting CC touch files
     "--bare", // no hooks, no auto-discovery, fastest path
     "--no-session-persistence",
   ];
+  if (CAN_BYPASS_PERMISSIONS) args.push("--permission-mode", "bypassPermissions");
   if (model) args.push("--model", model);
   if (system) args.push("--append-system-prompt", system);
   if (imagePaths.length) args.push("--add-dir", reqDir);
@@ -551,7 +552,7 @@ async function handleClaudeSdkChat(req, res) {
         settingSources: [],
         persistSession: false,
         continueConversation: false,
-        permissionMode: "bypassPermissions",
+        ...(CAN_BYPASS_PERMISSIONS ? { permissionMode: "bypassPermissions" } : {}),
         allowedTools: ["Read"],
         disallowedTools: ["Bash", "Edit", "Write", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch"],
         additionalDirectories: imagePaths.length ? [reqDir] : [],

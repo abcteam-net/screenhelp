@@ -34,11 +34,13 @@ That's it — capture, hotkey, interview mode, and live watch will all route thr
 For each chat request the bridge:
 
 1. Writes the captured screenshot (if any) to a fresh temp dir under `$TMPDIR/screenhelp-bridge/<random>/`.
-2. Spawns `claude -p --output-format stream-json --include-partial-messages --bare --permission-mode bypassPermissions [--model …] [--append-system-prompt …] [--add-dir <tmpdir>] "<prompt>"`.
+2. Spawns `claude -p --output-format stream-json --include-partial-messages --bare [--permission-mode bypassPermissions] [--model …] [--append-system-prompt …] [--add-dir <tmpdir>] "<prompt>"`.
 3. Parses the streaming JSON events and forwards assistant text deltas to the web app as newline-delimited `{"type":"text-delta", "text":"…"}` chunks.
 4. Cleans up the temp dir when the request closes.
 
 The bridge binds only to `127.0.0.1` and requires an `X-Bridge-Token` header. The token regenerates every process restart and is fetched by the Next.js server route at startup via a same-origin `GET /token` call.
+
+When the bridge is started as root, it omits Claude Code's bypass-permissions mode because Claude Code refuses that mode under root/sudo.
 
 ## Environment variables
 
